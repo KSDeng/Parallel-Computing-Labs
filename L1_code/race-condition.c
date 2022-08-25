@@ -23,12 +23,14 @@ void* add(void* threadid)
 	pthread_mutex_lock(&lock);
     long tid = *(long*) threadid;
     global_counter++;
-	if (global_counter == ADD_THREADS) {
-		add_finished = 1;
-		pthread_cond_signal(&count_threshold);
-	}
-    //sleep(rand() % 2);
+    sleep(rand() % 2);
     printf("add thread #%ld incremented global_counter! \n", tid);
+	if (global_counter == ADD_THREADS) {
+		printf("global_counter = %d, meet wait condition\n", global_counter);
+		add_finished = 1;
+		pthread_cond_broadcast(&count_threshold);
+		//pthread_cond_signal(&count_threshold);
+	}
 	pthread_mutex_unlock(&lock);
 	pthread_exit(NULL);
 }
@@ -36,12 +38,14 @@ void* add(void* threadid)
 void* sub(void* threadid)
 {
 	pthread_mutex_lock(&lock);	
-	while (add_finished == 0) {
-		pthread_cond_wait(&count_threshold, &lock);
-	}
     long tid = *(long*) threadid;
+	while (add_finished == 0) {
+		printf("thread #%ld waiting\n", tid);
+		pthread_cond_wait(&count_threshold, &lock);
+		printf("thread #%ld receive signal\n", tid);
+	}
     global_counter--;
-    //sleep(rand() % 2);
+    sleep(rand() % 2);
     printf("sub thread #%ld decremented global_counter! \n", tid);
 	pthread_mutex_unlock(&lock);
 	pthread_exit(NULL);

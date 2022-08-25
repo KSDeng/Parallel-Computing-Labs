@@ -10,30 +10,35 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define ADD_THREADS 4
-#define SUB_THREADS 4
+#define ADD_THREADS 100
+#define SUB_THREADS 100
 
 int global_counter;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 void* add(void* threadid)
 {
     long tid = *(long*) threadid;
+	pthread_mutex_lock(&lock);
     global_counter++;
-    sleep(rand() % 2);
-    printf("add thread #%ld incremented global_counter!\n", tid);
+    //sleep(rand() % 2);
+    printf("add thread #%ld incremented global_counter! \n", tid);
+	pthread_mutex_unlock(&lock);
 }
 
 void* sub(void* threadid)
 {
     long tid = *(long*) threadid;
+	pthread_mutex_lock(&lock);
     global_counter--;
-    sleep(rand() % 2);
+    //sleep(rand() % 2);
     printf("sub thread #%ld decremented global_counter! \n", tid);
+	pthread_mutex_unlock(&lock);
 }
 
 int main(int argc, char* argv[])
 {
-    global_counter = 10;
+    global_counter = 0;
     pthread_t add_threads[ADD_THREADS];
     pthread_t sub_threads[SUB_THREADS];
     long add_threadid[ADD_THREADS];
@@ -64,6 +69,14 @@ int main(int argc, char* argv[])
             exit(-1);
         }
     }
+
+	// wait for all the threads to terminate
+	for (t1 = 0; t1 < ADD_THREADS; t1++) {
+		pthread_join(add_threads[t1], NULL);
+	}
+	for (t2 = 0; t2 < SUB_THREADS; t2++) {
+		pthread_join(sub_threads[t2], NULL);
+	}
 
     printf("### global_counter final value = %d ###\n",
             global_counter);

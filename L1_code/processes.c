@@ -18,7 +18,6 @@ int main(int argc, char* argv[])
 
     // create the child process
     fork_ret = fork();
-    printf("We just cloned a process..!\n");
 
     if (fork_ret < 0) {
         // fork_ret would be -1 if unsuccessful
@@ -32,6 +31,7 @@ int main(int argc, char* argv[])
     } else {
         // fork_ret is the PID of the child (in the parent)
         // parent waits until child is completed
+    	printf("We just cloned a process..!\n");
         wait(NULL);
         printf("Child completed ....\n");
         printf("Parent process: value = %d\n", value);

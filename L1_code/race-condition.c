@@ -10,35 +10,49 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define ADD_THREADS 100
-#define SUB_THREADS 100
+#define ADD_THREADS 10
+#define SUB_THREADS 10
 
 int global_counter;
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+int add_finished = 0;
+pthread_mutex_t lock;
+pthread_cond_t count_threshold;
 
 void* add(void* threadid)
 {
-    long tid = *(long*) threadid;
 	pthread_mutex_lock(&lock);
+    long tid = *(long*) threadid;
     global_counter++;
+	if (global_counter == ADD_THREADS) {
+		add_finished = 1;
+		pthread_cond_signal(&count_threshold);
+	}
     //sleep(rand() % 2);
     printf("add thread #%ld incremented global_counter! \n", tid);
 	pthread_mutex_unlock(&lock);
+	pthread_exit(NULL);
 }
 
 void* sub(void* threadid)
 {
+	pthread_mutex_lock(&lock);	
+	while (add_finished == 0) {
+		pthread_cond_wait(&count_threshold, &lock);
+	}
     long tid = *(long*) threadid;
-	pthread_mutex_lock(&lock);
     global_counter--;
     //sleep(rand() % 2);
     printf("sub thread #%ld decremented global_counter! \n", tid);
 	pthread_mutex_unlock(&lock);
+	pthread_exit(NULL);
 }
 
 int main(int argc, char* argv[])
 {
     global_counter = 0;
+	pthread_mutex_init(&lock, NULL);		// difference between this and PTHREAD_MUTEX_INITIALIZER?
+	pthread_cond_init(&count_threshold, NULL);
+
     pthread_t add_threads[ADD_THREADS];
     pthread_t sub_threads[SUB_THREADS];
     long add_threadid[ADD_THREADS];

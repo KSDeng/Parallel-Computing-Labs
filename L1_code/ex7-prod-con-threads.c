@@ -1,10 +1,3 @@
-/*******************************************************************
- * prod-con-threads.c
- * Producer-consumer synchronisation problem in C
- * Compile: gcc -pthread -o prodcont prod-con-threads.c
- * Run: ./prodcont
- *******************************************************************/
-
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -42,8 +42,8 @@ void printBufferStatus(int pos_hl) {
 
 void producer(int producer_id) {
     while (1) {
-        sem_wait(&(p->buffer_sem));     // apply for shared memory lock
         sem_wait(&(p->free_sem));       // apply for a free space
+        sem_wait(&(p->buffer_sem));     // apply for shared memory lock
 
         // produce
         srand(time(NULL));
@@ -53,24 +53,24 @@ void producer(int producer_id) {
         p->pos_prod = (p->pos_prod + 1) % BUFFER_SIZE;
 
         // visualize
-        printf("[producer #%d] pos_prod = %d, insert %d, current buffer: ", p->pos_prod, producer_id, random_num);
+        printf("[producer #%d] insert %d, current buffer: ", producer_id, random_num);
         printBufferStatus(temp_pos);
         printf("\n");
-        sleep(1);
+        sleep(rand() % 2);
 
-        sem_post(&(p->used_sem));       // signal for a new production
         sem_post(&(p->buffer_sem));     // release the lock for shared memory
+        sem_post(&(p->used_sem));       // signal for a new production
     }
 }
 
 void consumer(int consumer_id) {
     int element;
     while (1) {
-        sem_wait(&(p->buffer_sem)); // apply for the shared memory lock
         sem_wait(&(p->used_sem));   // apply for a production
+        sem_wait(&(p->buffer_sem)); // apply for the shared memory lock
 
         // visualize
-        printf("[consumer #%d] pos_con = %d, current buffer: ", p->pos_con, consumer_id);
+        printf("[consumer #%d] current buffer: ", consumer_id);
         printBufferStatus(p->pos_con);
 
         // consume
@@ -79,10 +79,10 @@ void consumer(int consumer_id) {
         p->pos_con = (p->pos_con + 1) % BUFFER_SIZE;
         p->consumed_sum += element;
         printf(", consume %d, sum = %d\n", element, p->consumed_sum);
-        sleep(1);
+        sleep(rand() % 2);
 
-        sem_post(&(p->free_sem));       // signal for a new free space
         sem_post(&(p->buffer_sem));     // release the lock for the shared memory
+        sem_post(&(p->free_sem));       // signal for a new free space
     }
 }
 
@@ -149,9 +149,9 @@ int main() {
         shmctl(shmid, IPC_RMID, 0);
 
         // cleanup semaphores
-        sem_destroy(p->buffer_sem);
-        sem_destroy(p->used_sem);
-        sem_destroy(p->free_sem);
+        sem_destroy(&p->buffer_sem);
+        sem_destroy(&p->used_sem);
+        sem_destroy(&p->free_sem);
         exit(0);
     }
 }

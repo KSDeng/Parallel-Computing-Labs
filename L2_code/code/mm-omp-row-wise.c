@@ -1,17 +1,20 @@
 /**
  *
- * Matrix Multiplication - Sequential
+ * Matrix Multiplication - Shared-memory (OpenMP)
  *
  * CS3210
  *
  **/
 #include <assert.h>
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
 #include <time.h>
+#include <xmmintrin.h>
 
 int size;
+int threads;
 
 typedef struct
 {
@@ -20,7 +23,7 @@ typedef struct
 
 long long wall_clock_time()
 {
-#ifdef __linux__
+#ifdef LINUX
     struct timespec tp;
     clock_gettime(CLOCK_REALTIME, &tp);
     return (long long)(tp.tv_nsec + (long long)tp.tv_sec * 1000000000ll);
@@ -60,7 +63,7 @@ void allocate_matrix(matrix* m)
 
 /**
  * Free the memory allocated to a matrix.
- */
+ **/
 void free_matrix(matrix* m)
 {
     int i;
@@ -109,11 +112,27 @@ void mm(matrix a, matrix b, matrix result)
 {
     int i, j, k;
 
-    // Do the multiplication
+    // Parallelize the multiplication
+    // Iterations of the outer-most loop are divided
+    //   amongst the threads
+    // Variables are shared among threads (a, b, result)
+    // and each thread has its own private copy (i, j, k)
+
+#pragma omp parallel for shared(a, b, result) private(i, j, k)
     for (i = 0; i < size; i++)
         for (j = 0; j < size; j++)
             for (k = 0; k < size; k++)
                 result.element[i][j] += a.element[i][k] * b.element[k][j];
+}
+
+void mm_row_wise(matrix a, matrix b, matrix result)
+{
+	int i, j, k;
+#pragma omp parallel for shared(a, b, result) private(i, j, k)
+	for (i = 0; i < size; i++)
+		for (k = 0; k < size; k++)
+			for (j = 0; j < size; j++)
+				result.element[i][j] += a.element[i][k] * b.element[k][j];
 }
 
 void print_matrix(matrix m)
@@ -142,35 +161,44 @@ void work()
     init_matrix(a);
     init_matrix(b);
 
-    // Perform sequential matrix multiplication
+    // Perform parallel matrix multiplication
     before = wall_clock_time();
-    mm(a, b, result);
+	mm_row_wise(a, b, result);
     after = wall_clock_time();
-    fprintf(stderr, "Matrix multiplication took %1.3f seconds\n",
-        ((float)(after - before)) / 1000000000);
+    fprintf(stderr, "Matrix multiplication took %1.2f seconds\n", ((float)(after - before)) / 1000000000);
 
     // Print the result matrix
     // print_matrix(result);
-
-    free_matrix(&a);
-    free_matrix(&b);
-    free_matrix(&result);
 }
 
 int main(int argc, char** argv)
 {
     srand(0);
 
-    printf("Usage: %s <size>\n", argv[0]);
+    printf("Usage: %s <size> <threads>\n", argv[0]);
 
     if (argc >= 2)
         size = atoi(argv[1]);
     else
         size = 1024;
 
-    fprintf(stderr, "Sequential matrix multiplication of size %d\n", size);
+    if (argc >= 3)
+        threads = atoi(argv[2]);
+    else
+        threads = -1;
 
     // Multiply the matrices
+    if (threads != -1) {
+        omp_set_num_threads(threads);
+    }
+
+#pragma omp parallel
+    {
+        threads = omp_get_num_threads();
+    }
+
+    printf("Matrix multiplication of size %d using %d threads\n", size, threads);
+
     work();
 
     return 0;

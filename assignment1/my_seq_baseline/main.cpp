@@ -1,4 +1,5 @@
 #include "main.h"
+#include <sys/time.h>
 
 Train::Train(unsigned id, MRT_LINE line, Station *location) {
     this->train_id = id;
@@ -263,6 +264,19 @@ void simulate(const unordered_map<string, Station*>& stations,
 
 }
 
+long long wall_clock_time()
+{
+#ifdef LINUX
+    struct timespec tp;
+    clock_gettime(CLOCK_REALTIME, &tp);
+    return (long long)(tp.tv_nsec + (long long)tp.tv_sec * 1000000000ll);
+#else
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (long long)(tv.tv_usec * 1000 + (long long)tv.tv_sec * 1000000000ll);
+#endif
+}
+
 int main(int argc, char const* argv[]) {
 
     if (argc < 2) {
@@ -360,7 +374,11 @@ int main(int argc, char const* argv[]) {
     size_t num_lines;
     ifs >> num_lines;
 
+    long long before, after;
+    before = wall_clock_time();
     simulate(stations, N, g, y, b, num_lines);
+    after = wall_clock_time();
+    printf("%f seconds\n", ((float)(after - before)) / 1000000000);
 
     return 0;
 }
